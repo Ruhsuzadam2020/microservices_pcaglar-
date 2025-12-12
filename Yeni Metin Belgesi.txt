@@ -1,0 +1,39 @@
+test kodu powershell
+
+# 1. Değişkenleri Temizleme ve Tanımlama
+$URL = "http://localhost:8080/products"
+$TotalRequests = 100
+$V1Count = 0
+$V2Count = 0
+$V2Identifier = '"V2 Test Öğesi"' 
+
+Write-Host "--- Canary Trafik Dağılım Testi Başlatılıyor ($TotalRequests istek) ---" -ForegroundColor Blue
+
+# 2. Döngüyü Çalıştırma
+for ($i = 1; $i -le $TotalRequests; $i++) {
+    try {
+        # İstek gönderme ve RawContent'i yakalama
+        $Response = Invoke-WebRequest -Uri $URL -UseBasicParsing -ErrorAction Stop
+        $Content = $Response.Content
+
+        # İçeriğe göre V1 veya V2 sayımını artırma
+        if ($Content -match $V2Identifier) {
+            $V2Count++
+            Write-Host "${i}/${TotalRequests}: V2 Yük Alanı (BAŞARILI) - ${V2Count} adet" -ForegroundColor Green
+        } else {
+            $V1Count++
+            Write-Host "${i}/${TotalRequests}: V1 Yük Alanı" -ForegroundColor Yellow
+        }
+    }
+    catch {
+        Write-Host "${i}/${TotalRequests}: Hata oluştu! Bağlantı veya İstek Başarısız. (Hata: $($_.Exception.Message))" -ForegroundColor Red
+    }
+}
+
+# 3. Sonuçları Görüntüleme
+Write-Host "--- Test Sonuçları ---" -ForegroundColor Blue
+Write-Host "Toplam İstek Sayısı: $TotalRequests"
+Write-Host "V1 Sürümü İstek Sayısı: $V1Count (Beklenen: ~90)" -ForegroundColor Cyan
+Write-Host "V2 Sürümü İstek Sayısı: $V2Count (Beklenen: ~10)" -ForegroundColor Cyan
+Write-Host "V2 Dağılım Oranı: $([math]::Round($V2Count / $TotalRequests * 100, 2))%" -ForegroundColor Magenta
+Write-Host "----------------------"
